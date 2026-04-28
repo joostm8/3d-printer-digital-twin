@@ -1,0 +1,14 @@
+# node image
+FROM node:25-alpine3.21
+# set working directory inside the container
+WORKDIR /app
+# Copy app files into container
+COPY static static
+COPY index.html .
+COPY main.js .
+# run npm install for http-server
+RUN npm install --global http-server
+# Expose port of app
+EXPOSE 8000
+# Run the HTTP server
+CMD ["http-server", "./", "-p", "8000"]

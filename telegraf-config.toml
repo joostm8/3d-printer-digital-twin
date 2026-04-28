@@ -1,0 +1,67 @@
+# Read metrics from MQTT topic(s)
+[[inputs.mqtt_consumer]]
+    ## Broker URLs for the MQTT server
+    servers = ["tcp://broker:1883"]
+    ## Topics that will be subscribed to.
+    topics = [
+        "octoPrint/#",
+        "octoPrint1/#"
+    ]
+    ## The message topic will be stored in a tag specified by this value.
+    topic_tag = "" #entire topic does not need to be a tag, since we're filtering.
+    # see below for mqtt topic parsing.
+    ## Interval and ping timeout for keep-alive messages
+    ## The sum of those options defines when a connection loss is detected.
+    ## Note: The keep-alive interval needs to be greater or equal one second and
+    ## fractions of a second are not supported.
+    keepalive = "60s"
+    ping_timeout = "10s"
+    ## Username and password to connect MQTT server.
+    ## Not needed in case of allowed anonymous connection
+    # username = "telegraf"
+    # password = "metricsmetricsmetricsmetrics"
+    ## Data format to consume.
+    data_format = "json"
+    json_time_key = "_timestamp"
+    json_time_format = "unix"
+    json_timezone = "Europe/Brussels"
+    [[processors.rename]]
+    [[processors.rename.replace]]
+        field = "time"
+        dest = "event_time"
+    [[inputs.mqtt_consumer.topic_parsing]]
+        topic = "+/progress/+"
+        measurement = "_/measurement/_"
+        tags = "octoprint_instance/_/type"
+    [[inputs.mqtt_consumer.topic_parsing]]
+        topic = "+/temperature/+"
+        measurement = "_/measurement/_"
+        tags = "octoprint_instance/_/tool"
+    [[inputs.mqtt_consumer.topic_parsing]]
+        topic = "+/event/+"
+        measurement = "_/measurement/_"
+        tags = "octoprint_instance/_/event"
+
+[[outputs.file]]
+    ## Files to write to
+    files = ["stdout"]
+    # data_format = "json"
+[[outputs.postgresql]]
+    ## Specify connection address via the standard libpq connection string:
+    ##   host=... user=... password=... sslmode=... dbname=...
+    connection = "host=timescaledb user=postgres password=postgres sslmode=disable dbname=octoPrint"
+    ## Postgres schema to use.
+    schema = "public"
+    ## Type of the timestamp column
+    timestamp_column_type = "timestamp with time zone"
+    create_templates = [
+    '''CREATE TABLE {{ .table }} ({{ .columns }})''',
+    '''SELECT create_hypertable({{ .table|quoteLiteral }}, by_range('time'));''',
+    ]
+    log_level = "debug"
+[[outputs.influxdb_v2]]
+    urls = ["http://influxdb:8181"]
+    token = "apiv3_waJ_dNJmKY13Yc5g4vQ7NDnUGOCluQX4SICSVpl7kGN7o8lXv2HR8OQ1vxntvNbG5yz4YaFsw7BpamjnZ896QQ"
+    organization = ""
+    bucket = "octoPrint"
+    log_level = "debug"

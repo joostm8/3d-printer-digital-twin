@@ -1,0 +1,149 @@
+services:
+  octoprint:
+    image: octoprint/octoprint
+    profiles: ["octoprint-marlin"]
+    restart: unless-stopped
+    ports:
+      - 80:80
+    depends_on:
+      mosquitto:
+        condition: service_started
+        required: false
+      zenoh:
+        condition: service_started
+        required: false
+    volumes:
+     - ./docker-data/octoprint:/octoprint
+  
+  # octoprint2:
+  #   image: octoprint/octoprint
+  #   restart: unless-stopped
+  #   ports:
+  #     - 90:80
+  #   depends_on:
+  #     - mosquitto
+  #   volumes:
+  #    - ./docker-data/octoprint2:/octoprint
+
+  ####
+  # uncomment if you wish to edit the configuration files of octoprint
+  # refer to docs on configuration editing for more information
+  ####
+
+  config-editor:
+   image: linuxserver/code-server
+   ports:
+     - 8443:8443
+   depends_on:
+     - octoprint
+   restart: unless-stopped
+   environment:
+     - PUID=0
+     - PGID=0
+     - TZ=Europe/Brussels
+   volumes:
+     - ./docker-data/octoprint:/octoprint
+
+  mosquitto:
+    image: joostm8/mosquitto-anonymous-allowed
+    profiles: ["mosquitto"]
+    restart: unless-stopped
+    ports:
+      - 1883:1883
+    volumes:
+      - ./docker-data/mosquitto/data:/mosquitto/data
+      - ./docker-data/mosquitto/log:/mosquitto/log
+    networks:
+      default:
+        aliases:
+          - broker
+
+  zenoh:
+    image: eclipse/zenoh-bridge-mqtt
+    profiles: ["zenoh"]
+    init: true
+    restart: unless-stopped
+    ports:
+      - 1883:1883
+    networks:
+      default:
+        aliases:
+          - broker
+
+  3d-printer-viewer:
+    image: joostm8/3d-printer-viewer
+    restart: unless-stopped
+    ports:
+     - 8000:8000
+
+  mqtt-ws-bridge:
+    build: ./src/mqtt-websocket-bridge
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_started
+        required: false
+      zenoh:
+        condition: service_started
+        required: false
+
+  telegraf:
+    image: telegraf
+    ports:
+      - 8125:8125
+      - 8092:8092
+      - 8094:8094
+    depends_on:
+      mosquitto:
+        condition: service_started
+        required: false
+      zenoh:
+        condition: service_started
+        required: false
+    restart: unless-stopped
+    volumes:
+      - ./telegraf-config.toml:/etc/telegraf/telegraf.conf
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: octoPrint
+    ports:
+      - 5432:5432
+    volumes:
+      - ./docker-data/postgresql/data:/var/lib/postgresql/data
+
+  influxdb:
+    image: influxdb:3-core
+    ports:
+      - 8181:8181
+    command:
+      - influxdb3
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --plugin-dir=/var/lib/influxdb3/plugins
+    volumes:
+      - ./docker-data/influxdb3/data:/var/lib/influxdb3/data
+      - ./docker-data/influxdb3/plugins:/var/lib/influxdb3/plugins
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    user: "0"
+    ports:
+      - 3000:3000
+    volumes:
+      - ./docker-data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=1s
+    depends_on:
+      - timescaledb
