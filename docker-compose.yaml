@@ -15,34 +15,63 @@ services:
     volumes:
      - ./docker-data/octoprint:/octoprint
   
-  # octoprint2:
-  #   image: octoprint/octoprint
-  #   restart: unless-stopped
-  #   ports:
-  #     - 90:80
-  #   depends_on:
-  #     - mosquitto
-  #   volumes:
-  #    - ./docker-data/octoprint2:/octoprint
+  octoprint-klipper:
+    image: octoprint/octoprint
+    profiles: ["octoprint-klipper"]
+    restart: unless-stopped
+    ports:
+      - 80:80
+    depends_on:
+      mosquitto:
+        condition: service_started
+        required: false
+      zenoh:
+        condition: service_started
+        required: false
+    volumes:
+     - ./docker-data/octoprint-klipper:/octoprint
 
   ####
   # uncomment if you wish to edit the configuration files of octoprint
   # refer to docs on configuration editing for more information
   ####
 
-  config-editor:
-   image: linuxserver/code-server
-   ports:
-     - 8443:8443
-   depends_on:
-     - octoprint
-   restart: unless-stopped
-   environment:
-     - PUID=0
-     - PGID=0
-     - TZ=Europe/Brussels
-   volumes:
-     - ./docker-data/octoprint:/octoprint
+  # config-editor:
+  #  image: linuxserver/code-server
+  #  ports:
+  #    - 8443:8443
+  #  depends_on:
+  #    - octoprint
+  #  restart: unless-stopped
+  #  environment:
+  #    - PUID=0
+  #    - PGID=0
+  #    - TZ=Europe/Brussels
+  #  volumes:
+  #    - ./docker-data/octoprint:/octoprint
+
+  virtual-klipper-printer:
+    image: ghcr.io/mainsail-crew/virtual-klipper-printer:latest
+    profiles: ["octoprint-klipper","mainsail-klipper"]
+    volumes:
+      - ./docker-data/virtual-klipper-printer:/home/printer/printer_data:delegated,Z
+    ports:
+      - "7125:7125"
+      - "8110:8080"
+    tmpfs:
+      - /tmp:noexec
+      - /home/printer/printer_data/comms:noexec
+
+  mainsail:
+    image: ghcr.io/mainsail-crew/mainsail:latest
+    profiles: ["mainsail-klipper"]
+    restart: always
+    ports:
+      - '80:80/tcp'
+    volumes:
+      - ./mainsail-config.json:/usr/share/nginx/html/config.json:ro
+    depends_on:
+      - virtual-klipper-printer
 
   mosquitto:
     image: joostm8/mosquitto-anonymous-allowed
@@ -76,8 +105,23 @@ services:
     ports:
      - 8000:8000
 
-  mqtt-ws-bridge:
+  octoprint-mqtt-ws-bridge:
     build: ./src/mqtt-websocket-bridge
+    profiles: ["octoprint-marlin"]
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_started
+        required: false
+      zenoh:
+        condition: service_started
+        required: false
+
+  klipper-mqtt-ws-bridge:
+    build: ./src/klipper-mqtt-websocket-bridge
+    profiles: ["mainsail-klipper"]
     ports:
       - 9090:9090
     restart: unless-stopped
