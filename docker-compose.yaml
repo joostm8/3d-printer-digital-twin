@@ -16,11 +16,12 @@ services:
      - ./docker-data/octoprint:/octoprint
   
   octoprint-klipper:
-    image: octoprint/octoprint
+    image: virtual-klipper-printer-octoprint:local
     profiles: ["octoprint-klipper"]
     restart: unless-stopped
     ports:
-      - 80:80
+      - 5000:5000
+      - 8110:8080
     depends_on:
       mosquitto:
         condition: service_started
@@ -30,6 +31,10 @@ services:
         required: false
     volumes:
      - ./docker-data/octoprint-klipper:/octoprint
+     - ./docker-data/virtual-klipper-printer-octoprint:/home/printer/printer_data:delegated,Z
+    tmpfs:
+      - /tmp:noexec
+      - /home/printer/printer_data/comms:noexec
 
   ####
   # uncomment if you wish to edit the configuration files of octoprint
@@ -51,8 +56,8 @@ services:
   #    - ./docker-data/octoprint:/octoprint
 
   virtual-klipper-printer:
-    image: ghcr.io/mainsail-crew/virtual-klipper-printer:latest
-    profiles: ["octoprint-klipper","mainsail-klipper"]
+    image: virtual-klipper-printer-moonraker:local
+    profiles: ["mainsail-klipper"]
     volumes:
       - ./docker-data/virtual-klipper-printer:/home/printer/printer_data:delegated,Z
     ports:
