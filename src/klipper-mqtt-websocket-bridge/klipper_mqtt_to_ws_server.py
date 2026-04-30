@@ -40,12 +40,15 @@ WS_PORT = 9090
 INSTANCE_NAME = 'moonraker-virtual-printer'
 
 STATUS_TOPIC = f"{INSTANCE_NAME}/klipper/status"
+SPLIT_STATUS_TOPIC = f"{INSTANCE_NAME}/klipper/state/#"
+SPLIT_STATUS_TOPIC_PREFIX = f"{INSTANCE_NAME}/klipper/state/"
 API_RESPONSE_TOPIC = f"{INSTANCE_NAME}/moonraker/api/response"
 
 # Bridge state
 bridge_state = "idle"  # idle | printing | paused
 current_print_name: Optional[str] = None
 last_position_m = {"x": 0.0, "y": 0.0, "z": 0.0}
+last_e_mm: Optional[float] = None
 
 mqtt_event_queue: Optional[asyncio.Queue] = None
 connected_websockets: Set[Any] = set()
@@ -88,7 +91,7 @@ def on_connect(client, userdata, flags, rc, properties=None):
         return
 
     logging.info("Connected to MQTT broker at %s:%s", MQTT_BROKER, MQTT_PORT)
-    topics = [STATUS_TOPIC, API_RESPONSE_TOPIC]
+    topics = [STATUS_TOPIC, SPLIT_STATUS_TOPIC, API_RESPONSE_TOPIC]
     for topic in topics:
         userdata["client"].subscribe(topic)
         logging.info("Subscribed to MQTT topic: %s", topic)
@@ -128,14 +131,15 @@ async def ws_handler(websocket):
 
 
 async def _set_idle(reason: str) -> None:
-    global bridge_state, current_print_name
+    global bridge_state, current_print_name, last_e_mm
     bridge_state = "idle"
     current_print_name = None
+    last_e_mm = None
     logging.info("State -> idle (%s)", reason)
 
 
 async def _handle_print_stats(print_stats: Dict[str, Any]) -> None:
-    global bridge_state, current_print_name
+    global bridge_state, current_print_name, last_e_mm
 
     new_state = str(print_stats.get("state", "")).lower()
     filename = print_stats.get("filename")
@@ -150,6 +154,7 @@ async def _handle_print_stats(print_stats: Dict[str, Any]) -> None:
                 logging.info("State -> printing (resumed)")
             else:
                 bridge_state = "printing"
+                last_e_mm = None
                 await broadcast_json({"type": "mesh", "reset": True})
                 logging.info("State -> printing (started, file=%s)", current_print_name)
         return
@@ -162,7 +167,7 @@ async def _handle_print_stats(print_stats: Dict[str, Any]) -> None:
                 "x": last_position_m["x"],
                 "y": last_position_m["y"],
                 "z": last_position_m["z"],
-                "e": True,
+                "e": False,
             }
         )
         logging.info("State -> paused")
@@ -173,6 +178,8 @@ async def _handle_print_stats(print_stats: Dict[str, Any]) -> None:
 
 
 async def _handle_motion_report(motion_report: Dict[str, Any]) -> None:
+    global last_e_mm
+
     # Klipper usually reports [x, y, z, e] in millimeters as live_position.
     live_position = motion_report.get("live_position")
     if not isinstance(live_position, (list, tuple)) or len(live_position) < 3:
@@ -190,7 +197,14 @@ async def _handle_motion_report(motion_report: Dict[str, Any]) -> None:
     last_position_m["y"] = y
     last_position_m["z"] = z
 
-    e_bool = _safe_float(e_mm, default=0.0) >= 0
+    current_e_mm = _safe_float(e_mm, default=0.0)
+    if last_e_mm is None:
+        e_bool = False
+    else:
+        # Extrusion is active only when the E axis increases (ignores retracts/travel).
+        e_bool = (current_e_mm - last_e_mm) > 1e-6
+    last_e_mm = current_e_mm
+
     await broadcast_json({"type": "positionUpdate", "x": x, "y": y, "z": z, "e": e_bool})
 
 
@@ -224,6 +238,25 @@ async def _handle_api_notification(payload: Dict[str, Any]) -> None:
         await _set_idle(method)
 
 
+def _split_status_topic_to_status_update(topic: str, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not topic.startswith(SPLIT_STATUS_TOPIC_PREFIX):
+        return None
+
+    subtopic = topic[len(SPLIT_STATUS_TOPIC_PREFIX) :]
+    parts = subtopic.split("/")
+    if len(parts) < 2:
+        return None
+
+    object_name = parts[0]
+    state_name = "/".join(parts[1:])
+
+    # For split status Moonraker publishes payloads as {"eventtime": ..., "value": ...}.
+    if not isinstance(payload, dict) or "value" not in payload:
+        return None
+
+    return {object_name: {state_name: payload.get("value")}}
+
+
 async def handle_mqtt_event(topic: str, payload_text: str) -> None:
     try:
         payload = json.loads(payload_text) if payload_text else {}
@@ -233,6 +266,11 @@ async def handle_mqtt_event(topic: str, payload_text: str) -> None:
 
     if topic == STATUS_TOPIC and isinstance(payload, dict):
         await _handle_status_update(payload)
+        return
+
+    split_status_update = _split_status_topic_to_status_update(topic, payload)
+    if split_status_update is not None:
+        await _handle_status_update(split_status_update)
         return
 
     if topic == API_RESPONSE_TOPIC and isinstance(payload, dict):

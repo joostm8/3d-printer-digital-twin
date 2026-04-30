@@ -105,7 +105,7 @@ services:
           - broker
 
   3d-printer-viewer:
-    image: joostm8/3d-printer-viewer
+    build: ./src/3d-printer-viewer
     restart: unless-stopped
     ports:
      - 8000:8000

@@ -222,7 +222,7 @@ The dashboard then looks something like this (if you have data available, and on
 
 #### Adding the Klipper Datasource
 
-TODO
+Add a new datasource like you did before, but specify 'moonraker' as the database.
 
 #### Creating a new Klipper dashboard
 
@@ -230,7 +230,37 @@ Head to `Home>Dashboards` and create a new dashboard, name it `Klipper`.
 
 #### Adding panels
 
+Do the same as before, but select the right datasource.
 
+The queries are:
+
+Position:
+
+        select x, y, z, time from printer_position;
+
+Bed temperature:
+
+        SELECT
+        time,
+        last(value, time) FILTER (WHERE field = 'temperature') AS temperature,
+        last(value, time) FILTER (WHERE field = 'target') AS target
+        FROM printer_temperature
+        WHERE $__timeFilter(time)
+        AND heater = 'heater_bed'
+        GROUP BY 1
+        ORDER BY 1
+
+Extruder temperature:
+
+        SELECT
+        time,
+        last(value, time) FILTER (WHERE field = 'temperature') AS temperature,
+        last(value, time) FILTER (WHERE field = 'target') AS target
+        FROM printer_temperature
+        WHERE $__timeFilter(time)
+        AND heater = 'extruder'
+        GROUP BY 1
+        ORDER BY 1
 
 ### Slicing 3D files
 

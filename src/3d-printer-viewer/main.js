@@ -303,10 +303,13 @@ loader.load( './static/ender3v2.glb', function ( gltf ) {
     // If extruding and position changed, add to path and update mesh
     if (posChanged){
       console.log("pos changed, updating viz")
-      if(extrusionPath.length > 1){
-        finalizeCurrentMesh();
-      }
       if(e){
+        // Transition from non-extruding to extruding: start a fresh segment
+        // so travel moves are never bridged by a tube.
+        if (!printerState.extruding) {
+          extrusionPath = [];
+        }
+
         // if extruding, add extrusionpoint
         printerState.extruding = true;
         AddExtrusionPoint();
@@ -314,6 +317,8 @@ loader.load( './static/ender3v2.glb', function ( gltf ) {
         // if not extruding, finalize current mesh (if any)
         finalizeCurrentMesh();
         printerState.extruding = false;
+        // Clear the working path so the next extrusion starts cleanly.
+        extrusionPath = [];
       }
     }else{
       console.log("pos not changed.")
