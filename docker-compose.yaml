@@ -166,6 +166,7 @@ services:
       - 5432:5432
     volumes:
       - ./docker-data/postgresql/data:/var/lib/postgresql/data
+      - ./src/postgres-init:/docker-entrypoint-initdb.d:ro
 
   influxdb:
     image: influxdb:3-core

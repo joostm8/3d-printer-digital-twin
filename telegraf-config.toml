@@ -42,11 +42,68 @@
         measurement = "_/measurement/_"
         tags = "octoprint_instance/_/event"
 
+# Moonraker split-status stream for toolhead position (x/y/z/e)
+# Requires in moonraker.conf:
+#   publish_split_status: True
+[[inputs.mqtt_consumer]]
+    servers = ["tcp://broker:1883"]
+    topics = [
+        "moonraker-virtual-printer/klipper/state/motion_report/live_position"
+    ]
+    data_format = "json_v2"
+    name_override = "printer_position"
+    [[inputs.mqtt_consumer.topic_parsing]]
+        topic = "moonraker-virtual-printer/klipper/state/+/+"
+        tags = "_/_/_/object/field"
+    [[inputs.mqtt_consumer.json_v2]]
+        timestamp_path = "eventtime"
+        timestamp_format = "unix"
+        [[inputs.mqtt_consumer.json_v2.field]]
+            path = "value.0"
+            rename = "x"
+            type = "float"
+        [[inputs.mqtt_consumer.json_v2.field]]
+            path = "value.1"
+            rename = "y"
+            type = "float"
+        [[inputs.mqtt_consumer.json_v2.field]]
+            path = "value.2"
+            rename = "z"
+            type = "float"
+        [[inputs.mqtt_consumer.json_v2.field]]
+            path = "value.3"
+            rename = "e"
+            type = "float"
+
+# Moonraker split-status stream for extruder/bed temperatures and targets
+[[inputs.mqtt_consumer]]
+    servers = ["tcp://broker:1883"]
+    topics = [
+        "moonraker-virtual-printer/klipper/state/extruder/temperature",
+        "moonraker-virtual-printer/klipper/state/extruder/target",
+        "moonraker-virtual-printer/klipper/state/heater_bed/temperature",
+        "moonraker-virtual-printer/klipper/state/heater_bed/target"
+    ]
+    data_format = "json_v2"
+    name_override = "printer_temperature"
+    [[inputs.mqtt_consumer.topic_parsing]]
+        topic = "moonraker-virtual-printer/klipper/state/+/+"
+        tags = "_/_/_/heater/field"
+    [[inputs.mqtt_consumer.json_v2]]
+        timestamp_path = "eventtime"
+        timestamp_format = "unix"
+        [[inputs.mqtt_consumer.json_v2.field]]
+            path = "value"
+            rename = "value"
+            type = "float"
+
 [[outputs.file]]
     ## Files to write to
     files = ["stdout"]
     # data_format = "json"
 [[outputs.postgresql]]
+    ## OctoPrint metrics only
+    namedrop = ["printer_position", "printer_temperature"]
     ## Specify connection address via the standard libpq connection string:
     ##   host=... user=... password=... sslmode=... dbname=...
     connection = "host=timescaledb user=postgres password=postgres sslmode=disable dbname=octoPrint"
@@ -59,6 +116,23 @@
     '''SELECT create_hypertable({{ .table|quoteLiteral }}, by_range('time'));''',
     ]
     log_level = "debug"
+
+[[outputs.postgresql]]
+    ## Moonraker metrics only
+    namepass = ["printer_position", "printer_temperature"]
+    ## Specify connection address via the standard libpq connection string:
+    ##   host=... user=... password=... sslmode=... dbname=...
+    connection = "host=timescaledb user=postgres password=postgres sslmode=disable dbname=moonraker"
+    ## Postgres schema to use.
+    schema = "public"
+    ## Type of the timestamp column
+    timestamp_column_type = "timestamp with time zone"
+    create_templates = [
+    '''CREATE TABLE {{ .table }} ({{ .columns }})''',
+    '''SELECT create_hypertable({{ .table|quoteLiteral }}, by_range('time'));''',
+    ]
+    log_level = "debug"
+
 [[outputs.influxdb_v2]]
     urls = ["http://influxdb:8181"]
     token = "apiv3_waJ_dNJmKY13Yc5g4vQ7NDnUGOCluQX4SICSVpl7kGN7o8lXv2HR8OQ1vxntvNbG5yz4YaFsw7BpamjnZ896QQ"
