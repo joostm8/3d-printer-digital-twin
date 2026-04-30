@@ -18,7 +18,7 @@ you specify which components you need with the `--profile` option of docker comp
 
 * `octoprint-marlin`
 * `mainsail-klipper`
-* `octoprint-klipper` - note: don't use, doesn't send positionUpdates so no position data is logged.
+* `octoprint-klipper`
 
 and one of the following arguments for the broker
 
