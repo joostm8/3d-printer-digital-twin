@@ -1,0 +1,14 @@
+services:
+  octoprint:
+    image: octoprint/octoprint
+    restart: unless-stopped
+    ports:
+      - 80:80
+    volumes:
+      - ../../../docker-data/octoprint:/octoprint
+
+  octoprint-mqtt-ws-bridge:
+    build: ../../../src/mqtt-websocket-bridge
+    ports:
+      - 9090:9090
+    restart: unless-stopped

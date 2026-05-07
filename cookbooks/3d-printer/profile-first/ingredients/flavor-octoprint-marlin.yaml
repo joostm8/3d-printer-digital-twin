@@ -1,0 +1,30 @@
+services:
+  octoprint:
+    image: octoprint/octoprint
+    profiles: ["octoprint-marlin"]
+    restart: unless-stopped
+    ports:
+      - 80:80
+    depends_on:
+      mosquitto:
+        condition: service_started
+        required: false
+      zenoh:
+        condition: service_started
+        required: false
+    volumes:
+      - ../../../docker-data/octoprint:/octoprint
+
+  octoprint-mqtt-ws-bridge:
+    build: ../../../src/mqtt-websocket-bridge
+    profiles: ["octoprint-marlin", "octoprint-klipper"]
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    depends_on:
+      mosquitto:
+        condition: service_started
+        required: false
+      zenoh:
+        condition: service_started
+        required: false

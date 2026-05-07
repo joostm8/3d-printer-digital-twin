@@ -1,0 +1,7 @@
+include:
+  - ./ingredients/core.yaml
+  - ./ingredients/broker-mosquitto.yaml
+  - ./ingredients/broker-zenoh.yaml
+  - ./ingredients/flavor-octoprint-marlin.yaml
+  - ./ingredients/flavor-octoprint-klipper.yaml
+  - ./ingredients/flavor-mainsail-klipper.yaml

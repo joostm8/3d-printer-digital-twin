@@ -1,0 +1,19 @@
+services:
+  octoprint-klipper:
+    image: virtual-klipper-printer-octoprint:local
+    restart: unless-stopped
+    ports:
+      - 5000:5000
+      - 8110:8080
+    volumes:
+      - ../../../docker-data/octoprint-klipper:/octoprint
+      - ../../../docker-data/virtual-klipper-printer-octoprint:/home/printer/printer_data:delegated,Z
+    tmpfs:
+      - /tmp:noexec
+      - /home/printer/printer_data/comms:noexec
+
+  octoprint-mqtt-ws-bridge:
+    build: ../../../src/mqtt-websocket-bridge
+    ports:
+      - 9090:9090
+    restart: unless-stopped

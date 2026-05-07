@@ -1,0 +1,13 @@
+services:
+  mosquitto:
+    image: joostm8/mosquitto-anonymous-allowed
+    restart: unless-stopped
+    ports:
+      - 1883:1883
+    volumes:
+      - ../../../docker-data/mosquitto/data:/mosquitto/data
+      - ../../../docker-data/mosquitto/log:/mosquitto/log
+    networks:
+      default:
+        aliases:
+          - broker

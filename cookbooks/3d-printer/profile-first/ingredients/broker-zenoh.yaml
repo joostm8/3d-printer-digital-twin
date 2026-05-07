@@ -1,0 +1,12 @@
+services:
+  zenoh:
+    image: eclipse/zenoh-bridge-mqtt
+    profiles: ["zenoh"]
+    init: true
+    restart: unless-stopped
+    ports:
+      - 1883:1883
+    networks:
+      default:
+        aliases:
+          - broker

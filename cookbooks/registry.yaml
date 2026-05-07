@@ -1,0 +1,35 @@
+# Cookbook registry
+# Each domain has its own DOMAIN.instructions.md that the LLM should read
+# when the user's intent matches that domain.
+
+domains:
+  - id: 3d-printer
+    label: 3D Printer Digital Twin
+    description: Monitor, visualise, and simulate a 3D printer using OctoPrint or Mainsail/Klipper.
+    instructions: cookbooks/3d-printer/DOMAIN.instructions.md
+    use_cases:
+      - id: general
+        label: General monitoring and telemetry
+        description: Collect print metrics, visualise in Grafana, store in TimescaleDB or InfluxDB.
+      - id: temperature-simulation
+        label: Temperature simulation
+        description: Feed live sensor data into a thermal model to predict hot-end and bed behaviour.
+      - id: object-tracking
+        label: Printed-object quality tracking
+        description: Track layer-by-layer quality metrics and link them to the resulting physical object.
+
+  - id: beer-brewing
+    label: Beer Brewing Digital Twin
+    description: Monitor fermentation temperature, gravity, and process steps in a home or craft brewery.
+    instructions: cookbooks/beer-brewing/DOMAIN.instructions.md
+    use_cases:
+      - id: general
+        label: General fermentation monitoring
+        description: Log temperature, gravity, and CO2 levels to a time-series database and Grafana.
+
+# Combined recipes (cross-domain)
+combined:
+  - id: 3d-printer-temperature-simulation
+    label: 3D Printer + Temperature Simulation Stack
+    description: Extends the general 3D printer recipe with a thermal simulation sidecar service.
+    compose: cookbooks/combined/compose.3d-printer-temperature-simulation.mosquitto.yaml

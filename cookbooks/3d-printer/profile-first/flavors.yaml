@@ -1,0 +1,41 @@
+flavors:
+  - id: octoprint-marlin
+    summary: OctoPrint with Marlin-style virtual printer path.
+    services:
+      - octoprint
+      - octoprint-mqtt-ws-bridge
+    incompatible_with:
+      - octoprint-klipper
+      - mainsail-klipper
+  - id: octoprint-klipper
+    summary: OctoPrint UI with Klipper backend container.
+    services:
+      - octoprint-klipper
+      - octoprint-mqtt-ws-bridge
+    incompatible_with:
+      - octoprint-marlin
+      - mainsail-klipper
+  - id: mainsail-klipper
+    summary: Mainsail UI with Moonraker/Klipper virtual printer.
+    services:
+      - virtual-klipper-printer
+      - mainsail
+      - klipper-mqtt-ws-bridge
+    incompatible_with:
+      - octoprint-marlin
+      - octoprint-klipper
+
+brokers:
+  - id: mosquitto
+    service: mosquitto
+    port: 1883
+  - id: zenoh
+    service: zenoh
+    port: 1883
+
+core_services:
+  - 3d-printer-viewer
+  - telegraf
+  - timescaledb
+  - influxdb
+  - grafana

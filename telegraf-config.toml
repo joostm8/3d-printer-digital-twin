@@ -133,9 +133,9 @@
     ]
     log_level = "debug"
 
-[[outputs.influxdb_v2]]
-    urls = ["http://influxdb:8181"]
-    token = "apiv3_waJ_dNJmKY13Yc5g4vQ7NDnUGOCluQX4SICSVpl7kGN7o8lXv2HR8OQ1vxntvNbG5yz4YaFsw7BpamjnZ896QQ"
-    organization = ""
-    bucket = "octoPrint"
-    log_level = "debug"
+# [[outputs.influxdb_v2]]
+#     urls = ["http://influxdb:8181"]
+#     token = "apiv3_waJ_dNJmKY13Yc5g4vQ7NDnUGOCluQX4SICSVpl7kGN7o8lXv2HR8OQ1vxntvNbG5yz4YaFsw7BpamjnZ896QQ"
+#     organization = ""
+#     bucket = "octoPrint"
+#     log_level = "debug"

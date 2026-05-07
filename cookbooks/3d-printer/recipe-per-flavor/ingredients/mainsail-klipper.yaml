@@ -1,0 +1,27 @@
+services:
+  virtual-klipper-printer:
+    image: virtual-klipper-printer-moonraker:local
+    volumes:
+      - ../../../docker-data/virtual-klipper-printer:/home/printer/printer_data:delegated,Z
+    ports:
+      - 7125:7125
+      - 8110:8080
+    tmpfs:
+      - /tmp:noexec
+      - /home/printer/printer_data/comms:noexec
+
+  mainsail:
+    image: ghcr.io/mainsail-crew/mainsail:latest
+    restart: always
+    ports:
+      - 80:80/tcp
+    volumes:
+      - ../../../mainsail-config.json:/usr/share/nginx/html/config.json:ro
+    depends_on:
+      - virtual-klipper-printer
+
+  klipper-mqtt-ws-bridge:
+    build: ../../../src/klipper-mqtt-websocket-bridge
+    ports:
+      - 9090:9090
+    restart: unless-stopped

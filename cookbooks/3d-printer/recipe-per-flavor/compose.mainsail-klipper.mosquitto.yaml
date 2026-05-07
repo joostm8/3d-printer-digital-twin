@@ -1,0 +1,4 @@
+include:
+  - ./ingredients/core.yaml
+  - ./ingredients/mosquitto.yaml
+  - ./ingredients/mainsail-klipper.yaml

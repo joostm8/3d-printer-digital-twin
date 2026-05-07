@@ -1,0 +1,24 @@
+# Temperature simulation sidecar
+#
+# This ingredient extends any 3D printer recipe with a thermal simulation service.
+# Replace the image placeholder with your actual simulation container when available.
+#
+# The sidecar subscribes to printer telemetry on the broker (aliased as "broker")
+# and publishes predicted temperatures back to the same broker on
+# topic: printer/simulation/temperature
+#
+# To use: include this file alongside a printer flavor ingredient and a broker ingredient.
+# Example: see cookbooks/combined/compose.3d-printer-temperature-simulation.mosquitto.yaml
+
+services:
+  temperature-simulation:
+    image: placeholder/temperature-simulation:latest   # replace with real image
+    restart: unless-stopped
+    environment:
+      - MQTT_BROKER=broker
+      - MQTT_PORT=1883
+      - SUBSCRIBE_TOPIC=octoprint/event/#
+      - PUBLISH_TOPIC=printer/simulation/temperature
+    # Uncomment when broker service is in a named network:
+    # networks:
+    #   default: {}

@@ -1,0 +1,4 @@
+include:
+  - ./ingredients/core.yaml
+  - ./ingredients/zenoh.yaml
+  - ./ingredients/mainsail-klipper.yaml

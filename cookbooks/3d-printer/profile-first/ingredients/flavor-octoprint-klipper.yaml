@@ -1,0 +1,21 @@
+services:
+  octoprint-klipper:
+    image: virtual-klipper-printer-octoprint:local
+    profiles: ["octoprint-klipper"]
+    restart: unless-stopped
+    ports:
+      - 5000:5000
+      - 8110:8080
+    depends_on:
+      mosquitto:
+        condition: service_started
+        required: false
+      zenoh:
+        condition: service_started
+        required: false
+    volumes:
+      - ../../../docker-data/octoprint-klipper:/octoprint
+      - ../../../docker-data/virtual-klipper-printer-octoprint:/home/printer/printer_data:delegated,Z
+    tmpfs:
+      - /tmp:noexec
+      - /home/printer/printer_data/comms:noexec
